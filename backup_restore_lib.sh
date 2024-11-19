@@ -50,8 +50,9 @@ validate_backup_params() {
 # Function to perform backup operations (actual backup logic)
 backup() {
   # Create timestamp and replace spaces/colons with underscores
-  TIMESTAMP=$(date +"%Y_%m_%d_%H_%M_%S")
-  TIMESTAMP=$(echo "$TIMESTAMP" | sed 's/[[:space:]:]/_/g')  # Replace spaces and colons with underscores
+  # TIMESTAMP=$(date +"%Y_%m_%d_%H_%M_%S")
+  # TIMESTAMP=$(echo "$TIMESTAMP" | sed 's/[[:space:]:]/_/g')  # Replace spaces and colons with underscores
+  TIMESTAMP=$(date +"%Y_%m_%d_%H_%M_%S" | sed 's/[[:space:]:]/_/g')
   BACKUP_DIR="$DEST_DIR/$TIMESTAMP"
   mkdir -p "$BACKUP_DIR"
 
@@ -80,9 +81,11 @@ backup() {
 
   # Transfer to remote server
   REMOTE_USER="ubuntu"  # Change this to the correct user for your server
-  EC2_PUBLIC_IP="51.20.189.148"  # Replace with your EC2 instance's public IP
+  EC2_PUBLIC_IP="51.20.91.213"  # Replace with your EC2 instance's public IP
   REMOTE_DIR="/home/ubuntu/backup"  # Replace with the correct remote directory
+ 
   KEY_PATH="/home/reem/Downloads/remote-key.pem"  # Path to your EC2 private key
+  
   scp -i "$KEY_PATH" "$FINAL_ENCRYPTED" "$REMOTE_USER@$EC2_PUBLIC_IP:$REMOTE_DIR"
 
   if [ "$?" -eq 0 ]; then
@@ -116,7 +119,7 @@ validate_restore_params() {
   
 
   echo "Enter the decryption key:"
-  read DECRYPTION_KEY  # Using -s to hide the key input
+  read DECRYPTION_KEY  
 
   # Validate decryption key
   if [ -z "$DECRYPTION_KEY" ]; then
@@ -133,8 +136,13 @@ validate_restore_params() {
   fi
 }
 
-# Function to perform restore operations
+# # Function to perform restore operations
 restore() {
+ # Create a temp directory under the restore destination
+  TEMP_DIR="$RESTORE_DEST_DIR/temp_restore"
+  mkdir -p "$TEMP_DIR"
+
+
   # Decrypt the backup file
   DECRYPTED_FILE="${ENCRYPTED_BACKUP_FILE%.gpg}"  # Remove .gpg extension
   echo "$DECRYPTION_KEY" | gpg --batch --yes --passphrase-fd 0 --decrypt -o "$DECRYPTED_FILE" "$ENCRYPTED_BACKUP_FILE"
@@ -153,7 +161,8 @@ restore() {
     echo "Error: Failed to extract the backup file."
     exit 1
   fi
-
+  # Cleanup: Delete the temporary directory
+  rm -rf "$TEMP_DIR"
 
 }
 
